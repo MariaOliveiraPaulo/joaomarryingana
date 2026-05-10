@@ -92,8 +92,33 @@ body {
   color: #4A6F56;
 }
 
+.mes {
+  font-family: 'Cormorant Infant', serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #4A6F56;
+  position: relative;
+  height: 24px;
+  margin: 0 auto 5px auto;
+  text-align: center;
+}
 
+.mes span {
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform-origin: 0 50px;
+}
 
+.mes span:nth-child(1) { transform: rotate(-20deg) translateX(-45px); }
+.mes span:nth-child(2) { transform: rotate(-15deg) translateX(-33px); }
+.mes span:nth-child(3) { transform: rotate(-10deg) translateX(-22px); }
+.mes span:nth-child(4) { transform: rotate(-5deg) translateX(-11px); }
+.mes span:nth-child(5) { transform: rotate(0deg) translateX(0px); }
+.mes span:nth-child(6) { transform: rotate(5deg) translateX(11px); }
+.mes span:nth-child(7) { transform: rotate(10deg) translateX(22px); }
+.mes span:nth-child(8) { transform: rotate(15deg) translateX(33px); }
 
 .data .linha {
   display: flex;
