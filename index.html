@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Envelope</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { overflow: hidden; touch-action: manipulation; background: #f5f0ea; }
+
+    .scene {
+      width: 100vw; height: 100vh; height: 100dvh;
+      overflow: hidden;
+    }
+
+    .envelope-wrap {
+      position: relative;
+      width: 100%; height: 100%;
+      cursor: pointer; user-select: none;
+    }
+
+    /* Todos os SVGs sobrepostos */
+    .env-svg {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    #svg-base { z-index: 2; pointer-events: all; }
+    #svg-top  { z-index: 4; }
+
+    /* Aba superior */
+    .flap-top-g {
+      transform-origin: 180px 0px;
+      transform-box: view-box;
+      transition: transform 0.75s cubic-bezier(0.4,0,0.2,1);
+    }
+    .open .flap-top-g { transform: rotateX(180deg); }
+
+    /* ── MÁSCARA DO CARTÃO ──────────────────────────────────────
+       Div absoluto que cobre todo o ecrã.
+       clip-path em px calculado por JS → shape exacto da abertura.
+       z-index 3: entre as abas laterais/inferior (z2) e a aba superior (z4).
+       overflow:visible para não cortar o cartão desnecessariamente
+       (o clip-path já faz o corte correcto).
+    ─────────────────────────────────────────────────────────── */
+    #card-mask {
+      position: absolute; inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      /* clip-path definido por JS */
+    }
+
+    /* O cartão em si — div HTML simples */
+    #convite-card {
+      position: absolute;
+      /* left/width/top/height definidos por JS */
+      background: url(assets/fundo.jpeg) center/cover;
+      border-radius: 12px 12px 0 0;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.18);
+      /* começa translateY(100%) — abaixo da sua posição final */
+      transform: translateY(100%);
+      transition: transform 0s;
+      will-change: transform;
+    }
+    #convite-card.rise {
+      transition: transform 1.2s cubic-bezier(0.22,1,0.36,1);
+      transform: translateY(0%);
+    }
+
+    /* Conteúdo do cartão */
+    .card-inner {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; padding: 24px 16px;
+      font-family: 'Cormorant Infant', serif;
+      text-align: center;
+    }
+    .card-nomes {
+      font-size: clamp(26px, 7vw, 38px);
+      font-family: 'SS Bruney', 'Great Vibes', cursive;
+    }
+    .card-sep {
+      width: 60px; height: 1px;
+      background: linear-gradient(to right, transparent, #b0915a, transparent);
+    }
+    .card-data {
+      font-size: clamp(11px, 2.8vw, 14px);
+      color: #4A6F56; letter-spacing: 3px; font-weight: 500;
+    }
+    .card-frase {
+      font-size: clamp(10px, 2.5vw, 13px);
+      color: #888; line-height: 1.7;
+    }
+
+    /* Selo */
+    .seal-area {
+      position: absolute; left: 50%; top: 56%;
+      transform: translate(-50%,-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 2vw;
+      z-index: 10; transition: opacity 0.4s ease;
+    }
+    .open .seal-area { opacity: 0; pointer-events: none; }
+    .seal-img {
+      width: 25vw; height: 25vw; max-width: 110px; max-height: 110px;
+      border-radius: 50%; object-fit: cover; display: block;
+    }
+    .click-hint span {
+      font-family: 'Cormorant Infant', Georgia, serif;
+      font-style: italic; font-size: clamp(14px,3.5vw,18px);
+      color: #b0915a; letter-spacing: 0.03em;
+    }
+
+    @font-face {
+      font-family: 'SS Bruney';
+      src: url('fonts/ss-bruney.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    /* Ornamentos nos cantos do cartão */
+    .ornament {
+      position: absolute;
+      width: 80px; height: 80px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-image: url('assets/ornamento.png');
+      opacity: 0.85;
+      pointer-events: none;
+    }
+    .ornament.top-left    { top: 0; left: 0; }
+    .ornament.top-right   { top: 0; right: 0; transform: scaleX(-1); }
+    .ornament.bottom-left { bottom: 0; left: 0; transform: scaleY(-1); }
+    .ornament.bottom-right{ bottom: 0; right: 0; transform: scale(-1); }
+    body { opacity: 0; }
+    body.ready { opacity: 1; transition: opacity 0.2s ease; }
+
+    .pulse-ring {
+      position: absolute; left: 50%; top: 56%;
+      transform: translate(-50%,-50%);
+      width: 25vw; height: 25vw; max-width: 110px; max-height: 110px;
+      border-radius: 50%; border: 1.5px solid #b0915a;
+      z-index: 9; pointer-events: none;
+      animation: pulseRing 2s ease-out infinite; transition: opacity 0.4s;
+    }
+    .open .pulse-ring { opacity: 0; }
+    @keyframes pulseRing {
+      0%  { transform: translate(-50%,-50%) scale(1);    opacity: 0.6; }
+      70% { transform: translate(-50%,-50%) scale(1.35); opacity: 0; }
+      100%{ transform: translate(-50%,-50%) scale(1.35); opacity: 0; }
+    }
+  </style>
+
+  
+  <!-- SS Bruney carregada localmente via style.css -->
+</head>
+<body>
+<div class="scene">
+<div class="envelope-wrap" id="env">
+
+  <!-- SVG 1 — corpo + abas laterais + aba inferior   z:2 -->
+  <svg id="svg-base" class="env-svg" viewBox="0 0 360 560" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <defs>
+      <pattern id="floral" patternUnits="userSpaceOnUse" width="80" height="80">
+        <rect width="80" height="80" fill="#f0ece6"/>
+        <g fill="none" stroke="#e2ddd6" stroke-width="0.8">
+          <ellipse cx="40" cy="40" rx="8" ry="14"/>
+          <ellipse cx="40" cy="40" rx="8" ry="14" transform="rotate(90,40,40)"/>
+          <ellipse cx="40" cy="40" rx="8" ry="14" transform="rotate(45,40,40)"/>
+          <ellipse cx="40" cy="40" rx="8" ry="14" transform="rotate(135,40,40)"/>
+          <circle cx="40" cy="40" r="5"/>
+          <circle cx="40" cy="40" r="2.5" fill="#ddd8d0" stroke="none"/>
+          <path d="M40,26 Q48,16 40,10 Q32,16 40,26Z" fill="#e5e0d8" stroke="none"/>
+          <path d="M40,54 Q48,64 40,70 Q32,64 40,54Z" fill="#e5e0d8" stroke="none"/>
+          <path d="M26,40 Q16,48 10,40 Q16,32 26,40Z" fill="#e5e0d8" stroke="none"/>
+          <path d="M54,40 Q64,48 70,40 Q64,32 54,40Z" fill="#e5e0d8" stroke="none"/>
+        </g>
+      </pattern>
+      <pattern id="bg" patternUnits="userSpaceOnUse" width="360" height="560">
+        <image href="assets/fundo.jpeg" x="0" y="0" width="360" height="560" preserveAspectRatio="xMidYMid slice"/>
+      </pattern>
+      <clipPath id="envClip"><rect x="0" y="0" width="360" height="560" rx="6"/></clipPath>
+      <clipPath id="clipLeft"><polygon points="0,70 180,305 180,255 0,490"/></clipPath>
+      <clipPath id="clipRight"><polygon points="360,70 180,305 180,255 360,490"/></clipPath>
+      <clipPath id="clipBottom"><path d="M0,560 L360,560 L360,490 L225,255 Q180,208 135,255 L0,490 Z"/></clipPath>
+      <filter id="shSide" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#6a5a48" flood-opacity="0.2"/>
+      </filter>
+      <filter id="shBottom" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="-4" stdDeviation="5" flood-color="#6a5a48" flood-opacity="0.28"/>
+      </filter>
+    </defs>
+    <rect x="0" y="0" width="360" height="560" rx="6" fill="url(#floral)" clip-path="url(#envClip)"/>
+    <rect x="0" y="0" width="360" height="560" rx="6" fill="url(#bg)" clip-path="url(#envClip)"/>
+    <rect x="0" y="0" width="360" height="560" rx="6" fill="none" stroke="#c8c0b4" stroke-width="1"/>
+    <g filter="url(#shSide)">
+      <rect x="0" y="0" width="360" height="560" fill="url(#floral)" clip-path="url(#clipLeft)"/>
+      <rect x="0" y="0" width="360" height="560" fill="url(#bg)" clip-path="url(#clipLeft)" opacity="0.9"/>
+      <rect x="0" y="0" width="360" height="560" fill="#b8b0a8" clip-path="url(#clipLeft)" opacity="0.18"/>
+    </g>
+    <g filter="url(#shSide)">
+      <rect x="0" y="0" width="360" height="560" fill="url(#floral)" clip-path="url(#clipRight)"/>
+      <rect x="0" y="0" width="360" height="560" fill="url(#bg)" clip-path="url(#clipRight)" opacity="0.9"/>
+      <rect x="0" y="0" width="360" height="560" fill="#b8b0a8" clip-path="url(#clipRight)" opacity="0.18"/>
+    </g>
+    <g filter="url(#shBottom)">
+      <rect x="0" y="0" width="360" height="560" fill="url(#floral)" clip-path="url(#clipBottom)"/>
+      <rect x="0" y="0" width="360" height="560" fill="url(#bg)" clip-path="url(#clipBottom)" opacity="0.95"/>
+      <path d="M0,560 L360,560 L360,490 L225,255 Q180,208 135,255 L0,490 Z" fill="#ccc4b8" opacity="0.14"/>
+      <path d="M0,560 L360,560 L360,490 L225,255 Q180,208 135,255 L0,490 Z" fill="none" stroke="#8a7a68" stroke-width="1.5" opacity="0.55"/>
+    </g>
+  </svg>
+
+  <!-- MÁSCARA + CARTÃO   z:3 -->
+  <div id="card-mask">
+    <div id="convite-card">
+
+          <!-- Ornamentos -->
+  <div class="ornament top-left"></div>
+  <div class="ornament top-right"></div>
+  <div class="ornament bottom-left"></div>
+  <div class="ornament bottom-right"></div>
+      <div class="card-inner">
+        <div class="card-nomes">Ana &amp; João</div>
+        <div class="card-frase">
+          Temos o prazer de vos convidar a partilhar connosco<br>
+          a celebração do nosso matrimónio.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG 2 — aba superior   z:4 -->
+  <svg id="svg-top" class="env-svg" viewBox="0 0 360 560" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <defs>
+      <pattern id="floral3" patternUnits="userSpaceOnUse" width="80" height="80">
+        <rect width="80" height="80" fill="#f0ece6"/>
+        <g fill="none" stroke="#e2ddd6" stroke-width="0.8">
+          <ellipse cx="40" cy="40" rx="8" ry="14"/>
+          <ellipse cx="40" cy="40" rx="8" ry="14" transform="rotate(90,40,40)"/>
+          <ellipse cx="40" cy="40" rx="8" ry="14" transform="rotate(45,40,40)"/>
+          <ellipse cx="40" cy="40" rx="8" ry="14" transform="rotate(135,40,40)"/>
+          <circle cx="40" cy="40" r="5"/>
+          <circle cx="40" cy="40" r="2.5" fill="#ddd8d0" stroke="none"/>
+        </g>
+      </pattern>
+      <pattern id="bg3" patternUnits="userSpaceOnUse" width="360" height="560">
+        <image href="assets/fundo.jpeg" x="0" y="0" width="360" height="560" preserveAspectRatio="xMidYMid slice"/>
+      </pattern>
+      <clipPath id="clipTopFlap">
+        <path d="M0,0 L360,0 L360,70 L225,305 Q180,352 135,305 L0,70 Z"/>
+      </clipPath>
+      <filter id="shTop" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#6a5a48" flood-opacity="0.45"/>
+      </filter>
+    </defs>
+    <g class="flap-top-g" id="flapTopG" filter="url(#shTop)">
+      <rect x="0" y="0" width="360" height="560" fill="url(#floral3)" clip-path="url(#clipTopFlap)"/>
+      <rect x="0" y="0" width="360" height="560" fill="url(#bg3)" clip-path="url(#clipTopFlap)" opacity="0.95"/>
+      <path d="M0,0 L360,0 L360,70 L225,305 Q180,352 135,305 L0,70 Z" fill="#ccc4b8" opacity="0.13"/>
+      <path d="M0,0 L360,0 L360,70 L225,305 Q180,352 135,305 L0,70 Z" fill="none" stroke="#8a7a68" stroke-width="1.5" opacity="0.6"/>
+    </g>
+  </svg>
+
+  <!-- Anel pulsante -->
+  <div class="pulse-ring"></div>
+
+  <!-- Selo -->
+  <div class="seal-area" id="sealArea">
+    <img src="assets/medalha.png" class="seal-img" alt="Selo">
+    <div class="click-hint"><span>clique para abrir</span></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+(function () {
+  var env     = document.getElementById('env');
+  var mask    = document.getElementById('card-mask');
+  var card    = document.getElementById('convite-card');
+  var clicked = false;
+
+  function vb(x, y) {
+    var W = env.offsetWidth, H = env.offsetHeight;
+    return { x: x / 360 * W, y: y / 560 * H };
+  }
+
+  function layout() {
+    var W = env.offsetWidth, H = env.offsetHeight;
+    if (!W || !H) return; // dimensões ainda não prontas
+
+    var tl = vb(0,   70);
+    var tr = vb(360, 70);
+    var br = vb(225, 255);
+    var bc = vb(180, 208);
+    var bl = vb(135, 255);
+
+    mask.style.clipPath =
+      'polygon(' +
+        tl.x + 'px ' + tl.y + 'px, ' +
+        tr.x + 'px ' + tr.y + 'px, ' +
+        br.x + 'px ' + br.y + 'px, ' +
+        bc.x + 'px ' + bc.y + 'px, ' +
+        bl.x + 'px ' + bl.y + 'px' +
+      ')';
+
+    var margin = W * 0.08;
+    card.style.left   = margin + 'px';
+    card.style.width  = (W - margin * 2) + 'px';
+    card.style.top    = tl.y + 'px';
+    card.style.height = (bl.y - tl.y) + 'px';
+
+    // Torna tudo visível só depois do layout estar correcto
+    document.body.classList.add('ready');
+  }
+
+  // Aguarda fontes + duplo rAF para dvh estabilizado
+  var doLayout = function () {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        layout();
+      });
+    });
+  };
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(doLayout);
+  } else {
+    doLayout();
+  }
+
+  // ResizeObserver é muito mais fiável em mobile do que o evento resize
+  // (apanha mudanças de dvh, rotação, barra de endereços a aparecer/desaparecer)
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () {
+      requestAnimationFrame(layout);
+    }).observe(env);
+  } else {
+    window.addEventListener('resize', layout);
+  }
+
+  env.addEventListener('click', function () {
+    if (clicked) return;
+    clicked = true;
+
+    env.classList.add('open');
+
+    setTimeout(function () {
+      card.classList.add('rise');
+    }, 480);
+
+    setTimeout(function () {
+      window.location.href = 'convite.html';
+    }, 2100);
+  });
+}());
+</script>
+</body>
+</html>
