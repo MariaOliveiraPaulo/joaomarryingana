@@ -99,11 +99,17 @@
       transform: translate(-50%,-50%);
       display: flex; flex-direction: column; align-items: center; gap: 2vw;
       z-index: 10; transition: opacity 0.4s ease;
+      /* pulse-ring é posicionado absolutamente em relação ao seal-img */
+    }
+    .seal-img-wrap {
+      position: relative;
+      width: 25vw; height: 25vw; max-width: 110px; max-height: 110px;
     }
     .open .seal-area { opacity: 0; pointer-events: none; }
     .seal-img {
-      width: 25vw; height: 25vw; max-width: 110px; max-height: 110px;
+      width: 100%; height: 100%;
       border-radius: 50%; object-fit: cover; display: block;
+      position: relative; z-index: 1;
     }
     .click-hint span {
       font-family: 'Cormorant Infant', Georgia, serif;
@@ -136,14 +142,20 @@
     body.ready { opacity: 1; transition: opacity 0.2s ease; }
 
     .pulse-ring {
-      position: absolute; left: 50%; top: 56%;
-      transform: translate(-50%,-50%);
-      width: 25vw; height: 25vw; max-width: 110px; max-height: 110px;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%; height: 100%;
       border-radius: 50%; border: 1.5px solid #b0915a;
-      z-index: 9; pointer-events: none;
+      pointer-events: none;
       animation: pulseRing 2s ease-out infinite; transition: opacity 0.4s;
     }
     .open .pulse-ring { opacity: 0; }
+    .seal-img {
+      width: 100%; height: 100%;
+      border-radius: 50%; object-fit: cover; display: block;
+      position: relative; z-index: 1;
+    }
     @keyframes pulseRing {
       0%  { transform: translate(-50%,-50%) scale(1);    opacity: 0.6; }
       70% { transform: translate(-50%,-50%) scale(1.35); opacity: 0; }
@@ -262,12 +274,12 @@
     </g>
   </svg>
 
-  <!-- Anel pulsante -->
-  <div class="pulse-ring"></div>
-
   <!-- Selo -->
   <div class="seal-area" id="sealArea">
-    <img src="assets/medalha.png" class="seal-img" alt="Selo">
+    <div class="seal-img-wrap">
+      <div class="pulse-ring"></div>
+      <img src="assets/medalha.png" class="seal-img" alt="Selo">
+    </div>
     <div class="click-hint"><span>clique para abrir</span></div>
   </div>
 
@@ -353,6 +365,16 @@
     setTimeout(function () {
       window.location.href = 'convite.html';
     }, 2100);
+  });
+
+  // Reset do estado quando se volta à página (ex: botão back do browser)
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+      clicked = false;
+      env.classList.remove('open');
+      card.classList.remove('rise');
+      card.style.transform = '';
+    }
   });
 }());
 </script>
