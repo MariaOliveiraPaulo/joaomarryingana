@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Envelope</title>
+  <title>Casamento Ana & João</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -67,6 +67,7 @@
       transition: transform 1.2s cubic-bezier(0.22,1,0.36,1);
       transform: translateY(0%);
       box-shadow: 0 -12px 40px rgba(0,0,0,0.35), 0 -2px 8px rgba(0,0,0,0.2);
+      z-index: 5;
     }
 
     /* Conteúdo do cartão */
@@ -361,6 +362,7 @@
     env.classList.add('open');
 
     setTimeout(function () {
+      mask.style.zIndex = '5';
       card.classList.add('rise');
     }, 480);
 
@@ -376,6 +378,7 @@
       env.classList.remove('open');
       card.classList.remove('rise');
       card.style.transform = '';
+      mask.style.zIndex = '3';
     }
   });
 }());
