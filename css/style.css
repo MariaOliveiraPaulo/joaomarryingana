@@ -242,7 +242,7 @@ body {
 }
 
 .circle:hover {
-  background-color: #ddd4c6;
+  background-color: #ffff;
 }
 
 .circle img {
@@ -421,4 +421,17 @@ height:100dvh;
 
 .envelope-hidden .convite-card{
   z-index:50;
+}
+
+/* MEDIA QUERIES — ICON-TEXT EM ECRÃS PEQUENOS */
+@media (max-width: 480px) {
+  .icon-text {
+    max-width: 55px;
+  }
+}
+
+@media (max-width: 360px) {
+  .icon-text {
+    max-width: 45px;
+  }
 }
